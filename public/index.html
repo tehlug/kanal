@@ -1,0 +1,228 @@
+<html>
+  <head>
+    <script type="text/javascript" src="/js/jquery.js"></script>
+    <script type="text/javascript" src="/js/md5.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <style>
+      * {
+        box-sizing:border-box;
+      }
+
+      @font-face { font-family: FreeFarsi; src: url('css/FreeFarsi.ttf'); }
+
+      body {
+        margin:0;
+        padding:0;
+        background:#DAD6D6;
+        overflow:hidden;
+        color:black;
+        font-family:'FreeFarsi';
+      }
+
+      #sidebar {
+        width:30%;
+        border-right: 1px solid black;
+        height:100%;
+        float: left;
+      }
+
+      #sidebar h1 {
+        text-align: center;
+        font-size: 5rem;
+        margin:0;
+
+      }
+
+      #main {
+        width:64%;
+        height: 100%;
+        background-image: url('css/logo.png');
+        background-repeat:no-repeat;
+        background-size: contain;
+        background-position: top right;
+        float: right;
+      }
+
+      #members {
+        direction: rtl;
+        list-style: none;
+        font-size: 3rem;
+        display: table;
+        margin:0;
+        padding: 0;
+        width: 98%;
+      }
+
+      #members li {
+        display: none;
+        height:6.5rem;
+        overflow: hidden;
+      }
+
+      #members li img {
+        border-radius: 1000px;
+        width: 6rem;
+        height: 6rem;
+        float: right;
+      }
+
+      #members li .name {
+        padding-top: 1.5rem;
+        padding-right: 0.5rem;
+        overflow: hidden;
+        height: 5.5rem;
+      }
+
+      #counter {
+        font-size: 7rem;
+        width:10rem;
+        height:10rem;
+        padding-top: 1rem;
+        text-align: center;
+        border: 0.1rem solid black;
+        border-radius: 10rem;
+        margin:auto;
+      }
+    </style>
+  </head>
+  <body>
+    <script id="new_presence" type="text/template">
+      <li>
+        <img>
+        <div class="name"></div>
+      </li>
+    </script>
+
+    <script id="new_say" type="text/template">
+      <li>
+        <img></img>
+        <div class="name"></div>
+        <div class="message"></div>
+      </li>
+    </script>
+
+    <script id="new_whisper" type="text/template">
+      <li>
+        <div class="message"></div>
+      </li>
+    </script>
+
+
+    <div id="sidebar">
+      <h1 id="session_number"></h1>
+      <div id="counter">0</div>
+      <br>
+      <ul id="members"></ul>
+      <div id="timer"></div>
+    </div>
+
+    <div id="main">
+      <div id="now"></div>
+
+      <ul id="messages"></ul>
+    </div>
+
+    <script type="text/javascript">
+      var socket = io();
+
+      socket.on('presence', notifyPresence);
+
+      $counter = $('#counter');
+      $members = $('#members');
+      $messages = $('#messages');
+
+      socket.emit('get present members', function(err, present_members) {
+        present_members.map(notifyPresence);
+      });
+
+      socket.emit('get session number', set_session_title);
+
+      socket.on('say', function(user, msg) {
+        $el = $($('#new_say').html());
+        $el.find('.name').text(user.name);
+        $el.find('.message').text(msg);
+
+        if(user.email) {
+          var u = getAvatar(user);
+          $el.find('img').attr('src', u);
+        } else {
+          $el.find('img').remove();
+        }
+
+        $el.appendTo($messages);
+      });
+
+      socket.on('whisper', function(msg) {
+        $el = $($('#new_whisper').html());
+        $el.find('.message').text(msg);
+        $el.appendTo($messages);
+      });
+
+      function increaseCounter() {
+        var cur = parseInt(toEnglish($counter.text()));
+        $counter.text(toPersian(++cur));
+      }
+
+      function notifyPresence(user) {
+        increaseCounter();
+        $el = $($('#new_presence').html());
+        $el.find('.name').text(user.name);
+
+        if(user.email) {
+          var u = getAvatar(user);
+          $el.find('img').attr('src', u);
+        } else {
+          $el.find('img').remove();
+        }
+        $el.prependTo($members).fadeIn();
+      }
+
+      function getAvatar(user) {
+        return 'http://www.gravatar.com/avatar/'+md5(user.email.toLowerCase());
+      }
+
+      function set_session_title(number) {
+        $('#sidebar h1').text('جلسه '+toPersian(number));
+      }
+
+      function toPersian(str) {
+        var str = str.toString();
+        str = str.replace(/0/g, '۰');
+        str = str.replace(/1/g, '۱');
+        str = str.replace(/2/g, '۲');
+        str = str.replace(/3/g, '۳');
+        str = str.replace(/4/g, '۴');
+        str = str.replace(/5/g, '۵');
+        str = str.replace(/6/g, '۶');
+        str = str.replace(/7/g, '۷');
+        str = str.replace(/8/g, '۸');
+        str = str.replace(/9/g, '۹');
+        return str;
+      }
+
+      function toEnglish(str) {
+        var str = str.toString();
+        str = str.replace(/۰/g, '0');
+        str = str.replace(/۱/g, '1');
+        str = str.replace(/۲/g, '2');
+        str = str.replace(/۳/g, '3');
+        str = str.replace(/۴/g, '4');
+        str = str.replace(/۵/g, '5');
+        str = str.replace(/۶/g, '6');
+        str = str.replace(/۷/g, '7');
+        str = str.replace(/۸/g, '8');
+        str = str.replace(/۹/g, '9');
+        return str;
+      }
+
+      $('#session_number').click(function() {
+        var number = window.prompt('Enter new session number');
+        if(!number)
+          return ;
+
+        sock.emit('set session number', parseInt(number));
+      });
+    </script>
+  </body>
+</html>
