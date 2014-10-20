@@ -2,7 +2,7 @@ var Modem = require('modem').Modem;
 var util = require('util');
 var sqlite3 = require('sqlite3').verbose();
 var db = new sqlite3.Database('data.sqlite');
-
+var fs = require('fs');
 var express = require('express');
 var app = express();
 
@@ -11,7 +11,7 @@ app.use(express.static(__dirname + '/public'));
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
-SESSION_ID = 207;
+SESSION_ID = parseInt(fs.readFileSync('tehlug/scripts/next_session.id'))-1;
 
 io.on('connection', function(sock) {
   sock.on('get present members', function(cb) {
@@ -33,16 +33,12 @@ modem.open(DEVICE, function() {
   modem.on('sms received', smsReceived);
 
   modem.on('memory full', function(memory) {
-    console.log('MEMORY FULL', memory);
     modem.execute('AT+CPMS="'+memory+'"', function(usage) {
-      console.log('Usage', usage);
       modem.getMessages(function(messages) {
-        console.log('>', messages.length);
         for(var i in messages) {
           var message = messages[i];
 
           for(var j in message.indexes) {
-            console.log('Deleting', message.indexes[j]);
             modem.deleteMessage(message.indexes[j]);
           }
         }
@@ -110,7 +106,7 @@ function smsReceived(sms) {
       return newUser(sms);
 
     if(sms.text.trim() === '')
-      savePresence(user, sms);
+      return savePresence(user, sms);
 
     var parts = sms.text.split('\n');
     var command = parts.shift().toLowerCase();

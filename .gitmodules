@@ -1,0 +1,3 @@
+[submodule "tehlug"]
+	path = tehlug
+	url = git@github.com:emilsedgh/tehlug.git

@@ -40,7 +40,7 @@
         background-image: url('css/logo.png');
         background-repeat:no-repeat;
         background-size: contain;
-        background-position: top right;
+        background-position: top left;
         float: right;
       }
 
@@ -84,6 +84,51 @@
         border-radius: 10rem;
         margin:auto;
       }
+
+      #messages {
+        direction: rtl;
+        list-style: none;
+        padding: 1rem;
+      }
+
+      #messages li {
+        height:6.5rem;
+        font-size: 3rem;
+        clear:both;
+        display: none;
+      }
+
+      #messages li .info {
+        float: right;
+        height: 20%;
+        width: 20%;
+        text-align: right;
+        display: table;
+        margin-bottom: 0.5rem;
+        font-size: 2rem;
+      }
+
+      #messages li img {
+        width:6rem;
+        height:6rem;
+        border-radius: 1000px;
+      }
+
+      #messages li .name {
+        height: 3rem;
+        overflow: hidden;
+      }
+
+      #messages li .message {
+        background-color: rgba(220,168,14, 0.7);
+        border-radius: 1rem;
+        padding: 0.5rem;
+      }
+
+      #messages li .time {
+        float: left;
+        font-size: 1rem;
+      }
     </style>
   </head>
   <body>
@@ -96,22 +141,18 @@
 
     <script id="new_say" type="text/template">
       <li>
-        <img></img>
-        <div class="name"></div>
-        <div class="message"></div>
-      </li>
-    </script>
-
-    <script id="new_whisper" type="text/template">
-      <li>
-        <div class="message"></div>
+        <div class="info"><img><div class="name"></div></div>
+        <div class="message">
+          <div class="time"></div>
+          <span class="text"></span>
+        </div>
       </li>
     </script>
 
 
     <div id="sidebar">
       <h1 id="session_number"></h1>
-      <div id="counter">0</div>
+      <div id="counter">۰</div>
       <br>
       <ul id="members"></ul>
       <div id="timer"></div>
@@ -138,26 +179,9 @@
 
       socket.emit('get session number', set_session_title);
 
-      socket.on('say', function(user, msg) {
-        $el = $($('#new_say').html());
-        $el.find('.name').text(user.name);
-        $el.find('.message').text(msg);
+      socket.on('say', said);
 
-        if(user.email) {
-          var u = getAvatar(user);
-          $el.find('img').attr('src', u);
-        } else {
-          $el.find('img').remove();
-        }
-
-        $el.appendTo($messages);
-      });
-
-      socket.on('whisper', function(msg) {
-        $el = $($('#new_whisper').html());
-        $el.find('.message').text(msg);
-        $el.appendTo($messages);
-      });
+      socket.on('whisper', whisper);
 
       function increaseCounter() {
         var cur = parseInt(toEnglish($counter.text()));
@@ -223,6 +247,36 @@
 
         sock.emit('set session number', parseInt(number));
       });
+
+      function said(user, msg) {
+        $el = $($('#new_say').html());
+        $el.find('.name').text(user.name);
+        $el.find('.text').text(msg);
+        $el.find('.time').text(formatTime(new Date));
+
+        if(user.email) {
+          var u = getAvatar(user);
+          $el.find('img').attr('src', u);
+        } else {
+          $el.find('img').remove();
+        }
+
+        $el.prependTo($messages).fadeIn();
+
+        return $el;
+      }
+
+      function whisper(user, msg) {
+        user.name = 'ناشناس';
+        user.email = false;
+        said(user, msg);
+      }
+
+      function formatTime(d) {
+        var h = ('0'+d.getHours()).substr(-2);
+        var m = ('0'+d.getMinutes()).substr(-2);
+        return toPersian(h)+':'+toPersian(m);
+      }
     </script>
   </body>
 </html>
